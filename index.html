@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ff3399">
+<meta name="description" content="生年月日から私立恵比寿中学の独自学年（中学◯年生）を判定するアプリ">
+
+<title>中学○年判定</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+    --pink:#ff3399;
+    --blue:#00b2ff;
+    --ink:#2b2640;
+    --muted:#8a829c;
+    --error:#ef4444;
+    --shadow-color:rgba(0,140,255,.25);
+}
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    font-family:'Noto Sans JP','Hiragino Sans',sans-serif;
+    color:var(--ink);
+    background:linear-gradient(135deg,#ffd6ec,#e4f7ff 50%,#cdeeff);
+    background-size:200% 200%;
+    animation:bgShift 12s ease-in-out infinite;
+    overflow:hidden;
+    position:relative;
+}
+
+@keyframes bgShift{
+    0%,100%{ background-position:0% 50%; }
+    50%{ background-position:100% 50%; }
+}
+
+/* 背景に浮かせる装飾ブロブ */
+body::before,
+body::after{
+    content:"";
+    position:fixed;
+    width:320px;
+    height:320px;
+    border-radius:50%;
+    filter:blur(70px);
+    opacity:.55;
+    z-index:0;
+    animation:float 9s ease-in-out infinite alternate;
+}
+body::before{
+    background:var(--pink);
+    top:-80px;
+    left:-80px;
+}
+body::after{
+    background:var(--blue);
+    bottom:-100px;
+    right:-100px;
+    animation-delay:1.5s;
+}
+@keyframes float{
+    0%{ transform:translate(0,0) scale(1); }
+    100%{ transform:translate(30px,40px) scale(1.15); }
+}
+
+.card{
+    position:relative;
+    z-index:1;
+    width:100%;
+    max-width:420px;
+    background:rgba(255,255,255,.78);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+    border:1px solid rgba(255,255,255,.6);
+    border-radius:28px;
+    box-shadow:0 24px 60px var(--shadow-color);
+    padding:44px 36px 40px;
+    text-align:center;
+    animation:cardIn .6s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes cardIn{
+    from{ opacity:0; transform:translateY(16px) scale(.98); }
+    to{ opacity:1; transform:none; }
+}
+
+h1{
+    margin:0 0 6px;
+    font-size:26px;
+    font-weight:900;
+    background:linear-gradient(135deg,var(--pink),var(--blue));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    letter-spacing:.02em;
+}
+
+.subtitle{
+    margin:0 0 32px;
+    font-size:13px;
+    color:var(--muted);
+    letter-spacing:.04em;
+}
+
+.field-label{
+    display:block;
+    font-size:12px;
+    font-weight:700;
+    color:var(--muted);
+    margin-bottom:8px;
+    letter-spacing:.08em;
+}
+
+.date-input{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    background:#fff;
+    border:2px solid #eee0f5;
+    border-radius:999px;
+    padding:14px 10px;
+    transition:border-color .2s, box-shadow .2s;
+}
+.date-input:focus-within{
+    border-color:var(--pink);
+    box-shadow:0 0 0 4px rgba(255,51,153,.15);
+}
+.date-input.invalid{
+    border-color:var(--error);
+}
+.date-input.shake{
+    animation:shake .4s;
+}
+@keyframes shake{
+    0%,100%{ transform:translateX(0); }
+    25%{ transform:translateX(-6px); }
+    75%{ transform:translateX(6px); }
+}
+
+.date-part{
+    flex:none;
+    width:4ch;
+    border:none;
+    outline:none;
+    background:transparent;
+    font-family:'Poppins','Noto Sans JP',sans-serif;
+    font-size:22px;
+    font-weight:600;
+    letter-spacing:.04em;
+    text-align:center;
+    color:var(--ink);
+    padding:0;
+}
+.date-part.year{
+    width:5ch;
+}
+.date-sep{
+    font-size:20px;
+    font-weight:600;
+    color:var(--muted);
+}
+
+.result-area{
+    margin-top:30px;
+    min-height:56px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+#result{
+    font-family:'Poppins','Noto Sans JP',sans-serif;
+    opacity:0;
+    transform:translateY(8px);
+    transition:opacity .35s ease, transform .35s ease;
+}
+#result.show{
+    opacity:1;
+    transform:none;
+}
+#result.success{
+    font-size:26px;
+    font-weight:800;
+    background:linear-gradient(135deg,var(--pink),var(--blue));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+}
+#result.error{
+    font-size:14px;
+    font-weight:600;
+    color:var(--error);
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+    <h1>中学○年判定</h1>
+    <p class="subtitle">私立恵比寿中学と同じ算出方法で判定します</p>
+
+    <span class="field-label" id="dateLabel">生年月日</span>
+    <div class="date-input" id="dateInput" role="group" aria-labelledby="dateLabel">
+        <input type="text" id="year" class="date-part year" placeholder="2004" maxlength="4" inputmode="numeric" autocomplete="off" aria-label="年" autofocus>
+        <span class="date-sep">/</span>
+        <input type="text" id="month" class="date-part" placeholder="06" maxlength="2" inputmode="numeric" autocomplete="off" aria-label="月">
+        <span class="date-sep">/</span>
+        <input type="text" id="day" class="date-part" placeholder="05" maxlength="2" inputmode="numeric" autocomplete="off" aria-label="日">
+    </div>
+
+    <div class="result-area">
+        <div id="result" aria-live="polite"></div>
+    </div>
+
+</div>
+
+<script>
+
+const yearInput = document.getElementById("year");
+const monthInput = document.getElementById("month");
+const dayInput = document.getElementById("day");
+const dateInput = document.getElementById("dateInput");
+const result = document.getElementById("result");
+
+function clearResult(){
+    result.className = "";
+    result.textContent = "";
+    dateInput.classList.remove("invalid");
+}
+
+function showError(message){
+    result.textContent = message;
+    result.className = "error show";
+    dateInput.classList.add("invalid");
+    dateInput.classList.remove("shake");
+    requestAnimationFrame(() => dateInput.classList.add("shake"));
+}
+
+function showSuccess(message){
+    result.textContent = message;
+    result.className = "success show";
+    dateInput.classList.remove("invalid");
+}
+
+// shakeアニメーション終了後にクラスを外し、次回も再生できるようにする
+dateInput.addEventListener("animationend", function(e){
+    if(e.animationName === "shake") dateInput.classList.remove("shake");
+});
+
+// 年/月/日が全て揃ったら自動判定、そうでなければ結果を消す
+function tryJudge(){
+    if(yearInput.value.length === 4 && monthInput.value.length === 2 && dayInput.value.length === 2){
+        judge(yearInput.value, monthInput.value, dayInput.value);
+    }else{
+        clearResult();
+    }
+}
+
+// 数字以外入力不可 + 前後フィールドへの移動(Backspace/矢印キー)
+function makeKeydownHandler(prev, next){
+    return function(e){
+        if(e.key === "Backspace"){
+            if(this.selectionStart === 0 && this.selectionEnd === 0 && prev){
+                prev.focus();
+                prev.setSelectionRange(prev.value.length, prev.value.length);
+            }
+            return;
+        }
+        if(e.key === "ArrowLeft"){
+            if(this.selectionStart === 0 && this.selectionEnd === 0 && prev){
+                e.preventDefault();
+                prev.focus();
+                prev.setSelectionRange(prev.value.length, prev.value.length);
+            }
+            return;
+        }
+        if(e.key === "ArrowRight"){
+            if(this.selectionStart === this.value.length && this.selectionEnd === this.value.length && next){
+                e.preventDefault();
+                next.focus();
+                next.setSelectionRange(0, 0);
+            }
+            return;
+        }
+        if(["Delete", "Tab", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+        if(!/^[0-9]$/.test(e.key)){
+            e.preventDefault();
+        }
+    };
+}
+yearInput.addEventListener("keydown", makeKeydownHandler(null, monthInput));
+monthInput.addEventListener("keydown", makeKeydownHandler(yearInput, dayInput));
+dayInput.addEventListener("keydown", makeKeydownHandler(monthInput, null));
+
+// 桁数以外の文字を除去し、欄を最初に埋め切った時だけ次のフィールドへ自動移動
+// (一度埋まった欄は、空にしない限り「完了済み」として扱い、桁数が一時的に減っても
+//  自動移動の対象にしない。Backspaceで1文字消して書き直す直し方にも対応するため)
+function makeInputHandler(maxLength, next){
+    return function(){
+        const cleaned = this.value.replace(/\D/g, "").slice(0, maxLength);
+        if(cleaned !== this.value){
+            this.value = cleaned;
+        }
+        const alreadyCompleted = this.dataset.completed === "1";
+        if(this.value.length === maxLength){
+            if(!alreadyCompleted && next) next.focus();
+            this.dataset.completed = "1";
+        }else if(this.value.length === 0){
+            this.dataset.completed = "0";
+        }
+        tryJudge();
+    };
+}
+yearInput.addEventListener("input", makeInputHandler(4, monthInput));
+monthInput.addEventListener("input", makeInputHandler(2, dayInput));
+dayInput.addEventListener("input", makeInputHandler(2, null));
+
+// 年欄に「20040605」などをまとめて貼り付けたら各欄に振り分ける
+yearInput.addEventListener("paste", function(e){
+    const digits = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "");
+    if(digits.length <= 4) return;
+    e.preventDefault();
+    yearInput.value = digits.slice(0, 4);
+    monthInput.value = digits.slice(4, 6);
+    dayInput.value = digits.slice(6, 8);
+    yearInput.dataset.completed = yearInput.value.length === 4 ? "1" : "0";
+    monthInput.dataset.completed = monthInput.value.length === 2 ? "1" : "0";
+    dayInput.dataset.completed = dayInput.value.length === 2 ? "1" : "0";
+    dayInput.focus();
+    tryJudge();
+});
+
+window.addEventListener("load", function(){
+    yearInput.focus();
+});
+
+// 年・月・日から、エビ中の学年を判定
+function judge(yearStr, monthStr, dayStr){
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+    const day = Number(dayStr);
+
+    const birth = new Date(year, month - 1, day);
+
+    // 存在しない日付(例:20260231)はDateオブジェクトが自動で繰り上げてしまうため、入力値と比較して検出する
+    if(
+        birth.getFullYear() !== year ||
+        birth.getMonth() !== month - 1 ||
+        birth.getDate() !== day
+    ){
+        showError("正しい生年月日を入力してください");
+        return;
+    }
+
+    const today = new Date();
+
+    // 4月始まりの学年度を求める(1〜3月は前年度扱い)
+    let schoolYear = today.getFullYear();
+    if(today.getMonth() < 3){
+        schoolYear--;
+    }
+
+    // 学校教育法の学齢基準(4/2生まれ〜翌年4/1生まれが同学年)に沿って入学年度を求める
+    const entranceYear = (month > 4 || (month === 4 && day >= 2))
+        ? year + 6
+        : year + 5;
+
+    const grade = schoolYear - entranceYear; // 小1=1, 中1=7, 高1=10, 大1=13
+    let ebichuGrade = grade - 6;             // エビ中換算(中学7年生=大学1年生)
+    if(ebichuGrade <= 0) ebichuGrade--;      // 中学1年生の下は0年生を飛ばして-1年生から
+
+    showSuccess("あなたは中学" + ebichuGrade + "年生です！");
+}
+
+</script>
+
+</body>
+</html>
